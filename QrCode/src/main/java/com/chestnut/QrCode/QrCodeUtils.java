@@ -7,6 +7,11 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+
 import cn.bingoogolapple.qrcode.zxing.QRCodeDecoder;
 import cn.bingoogolapple.qrcode.zxing.QRCodeEncoder;
 import rx.Observable;
@@ -120,6 +125,37 @@ public class QrCodeUtils {
             public void call(Subscriber<? super String> subscriber) {
                 subscriber.onNext(QRCodeDecoder.syncDecodeQRCode(filePath));
                 subscriber.onCompleted();
+            }
+        });
+    }
+
+    /**
+     * 生成一维码
+     * @param content  文本
+     * @return  bitmap
+     */
+    public static Observable<Bitmap> createOneCode(final String content) {
+        return Observable.create(new Observable.OnSubscribe<Bitmap>() {
+            @Override
+            public void call(Subscriber<? super Bitmap> subscriber) {
+                BitMatrix matrix;
+                try {
+                    matrix = new MultiFormatWriter().encode(content, BarcodeFormat.CODE_128, 500, 200);
+                    int width = matrix.getWidth();
+                    int height = matrix.getHeight();
+                    int[] pixels = new int[width * height];
+                    for (int y = 0; y < height; y++)
+                        for (int x = 0; x < width; x++)
+                            if (matrix.get(x, y))
+                                pixels[y * width + x] = 0xff000000;
+                    Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                    bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
+                    subscriber.onNext(bitmap);
+                    subscriber.onCompleted();
+                } catch (WriterException e) {
+                    e.printStackTrace();
+                    subscriber.onError(e);
+                }
             }
         });
     }
